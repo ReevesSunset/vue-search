@@ -1,8 +1,20 @@
 <template>
   <div id="app">
-    <input type="text" placeholder="搜索(汉字,首字母,拼音)">
+    <img src="./assets/img.jpg" alt="">
+    <input 
+      type="text" 
+      v-on:input="search"
+      placeholder="搜索(汉字,首字母,拼音)"
+      v-model="searchValue"
+    >
     <ul>
-      <li v-for="item in dataList">{{item}}</li>
+      <li v-if="resultData.length < 1">没有数据</li>
+      <li 
+        v-for="(item, index) in resultData"
+        @click="choose(item.name)" 
+        :key="item.id">
+        {{index}}  {{item.name}}
+      </li>
     </ul>
   </div>
 </template>
@@ -13,7 +25,25 @@ export default {
   data () {
     return {
       data: 'dasda',
-      dataList: ['zd', 'xs'],
+      dataList: [],
+      resultData: [],
+      searchValue: null,
+      name: [{ id: 1, name: '北京' },
+      { id: 2, name: '天津' },
+      { id: 3, name: '河北' },
+      { id: 4, name: '山西' },
+      { id: 5, name: '内蒙' },
+      { id: 6, name: '辽宁' },
+      { id: 7, name: '吉林' },
+      { id: 8, name: '黑龙江' },
+      { id: 9, name: '上海' },
+      { id: 10, name: '江苏' },
+      { id: 11, name: '浙江' },
+      { id: 12, name: '安徽' },
+      { id: 13, name: '河南' },
+      { id: 14, name: '香港' },
+      { id: 15, name: '台湾' }
+      ],
       PinYin: {
         'a': '\u554a\u963f\u9515',
         'ai': '\u57c3\u6328\u54ce\u5509\u54c0\u7691\u764c\u853c\u77ee\u827e\u788d\u7231\u9698\u8bf6\u6371\u55f3\u55cc\u5ad2\u7477\u66a7\u7839\u953f\u972d',
@@ -418,6 +448,126 @@ export default {
         'bia': '\u9adf'
       }
     }
+  },
+  created () {
+    this.toConversionPinYin()
+  },
+  methods: {
+    // 搜索
+    search () {
+      this.resultData = []
+      let chinese = new RegExp('[\\u4E00-\\u9FFF]+', 'g')
+      let other = /[a-z,A-Z,0-9]/g
+      let _this = this
+      let searchValue = this.searchValue
+      if (chinese.test(searchValue)) {
+        // 搜索的是中文
+        this.name.forEach(function (ele) {
+          if (ele.name.indexOf(searchValue) > -1) {
+            _this.resultData.push(ele)
+          }
+        })
+      } else if (other.test(searchValue)) {
+        // 字母数字
+        this.dataList.forEach(function (ele) {
+          if (ele.key.indexOf(searchValue) > -1) {
+            _this.resultData.push(ele.value)
+          }
+        })
+      }
+      this.deleteRepeat(this.resultData) // 去重
+      if (!this.searchValue) {
+        this.resultData = []
+      }
+    },
+    // 转换成拼音
+    toConversionPinYin () {
+      let _this = this
+      this.name.forEach(function (ele) {
+        let str = _this.CC2PYF(ele.name)
+        let str2 = _this.CC2PY(ele.name)
+        _this.dataList.push({
+          key: str.toLocaleLowerCase(),
+          value: ele
+        })
+        _this.dataList.push({
+          key: str2.toLocaleLowerCase(),
+          value: ele
+        })
+      })
+    },
+    // 去重
+    deleteRepeat (arr) {
+      for (var i = 0; i < arr.length - 1; i++) {
+        var old = arr[i]
+        for (var j = i + 1; j < arr.length; j++) {
+          if (old.id === arr[j].id && old.name === arr[j].name) {
+            arr.splice(j, 1)
+            j--
+          }
+        }
+      }
+      return arr
+    },
+    choose (data) {
+      alert(data)
+    },
+    // 全部转为拼音,小写  北京 beijing
+    CC2PY (l1) {
+      var l2 = l1.length
+      var I1 = ''
+      var reg = new RegExp('[a-zA-Z0-9]')
+      for (var i = 0; i < l2; i++) {
+        var val = l1.substr(i, 1)
+        var name = this.arraySearch(val, this.PinYin)
+        if (reg.test(val)) {
+          I1 += val
+        } else if (name !== false) {
+          I1 += name
+        }
+      }
+      I1 = I1.replace(/ /g, '-')
+      while (I1.indexOf('--') > 0) {
+        I1 = I1.replace('--', '-')
+      }
+      return I1.toLocaleLowerCase()
+    },
+    // 首字母大写 北京 bj
+    CC2PYF (l1) {
+      var l2 = l1.length
+      var I1 = ''
+      var reg = new RegExp('[a-zA-Z0-9]')
+      for (var i = 0; i < l2; i++) {
+        var val = l1.substr(i, 1)
+        var name = this.arraySearch(val, this.PinYin)
+        if (reg.test(val)) {
+          I1 += val
+        } else if (name !== false) {
+          I1 += name.substring(0, 1)
+        }
+      }
+      I1 = I1.replace(/ /g, '-')
+      while (I1.indexOf('--') > 0) {
+        I1 = I1.replace('--', '-')
+      }
+      return I1
+    },
+    arraySearch (l1, l2) {
+      for (var name in this.PinYin) {
+        if (this.PinYin[name].indexOf(l1) !== -1) {
+          return this.ucfirst(name)
+          // break
+        }
+      }
+      return false
+    },
+    ucfirst (l1) {
+      if (l1.length > 0) {
+        var first = l1.substr(0, 1).toUpperCase()
+        var spare = l1.substr(1, l1.length)
+        return first + spare
+      }
+    }
   }
 }
 </script>
@@ -432,12 +582,24 @@ export default {
   margin-top: 60px;
 }
 
+div {
+    width: 200px;
+    margin: 20px;
+}
+
+ul {
+    text-align: center;
+}
+
 li {
   list-style: none;
+  margin: 10px;
 }
 
 input {
   width: 200px;
   height: 40px;
+  padding-left: 10px;
+  box-sizing: border-box; 
 }
 </style>
